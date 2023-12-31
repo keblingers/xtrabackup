@@ -1,59 +1,93 @@
+import sys
+from pathlib import Path
+import argparse
 from datetime import datetime, date, timedelta
-import pandas as pd
 from dotenv import load_dotenv
 import os
+import pandas as pd
 import subprocess
 
-load_dotenv()
-today = datetime.now().strftime("%A")
-today_date = date.today()
-yesterday = today_date - timedelta(days=1)
-full_date = (datetime.now()-timedelta(days=((datetime.now().isoweekday()+1)%7))).strftime('%Y-%m-%d')
+def get_date():
+        now = datetime.today()
+        day_id = (now.weekday() + 1) % 7
+        day_number = now - timedelta(7+day_id-6)
+        last_saturday = day_number.strftime('%Y-%m-%d')
+                        
+        today_date = datetime.today().strftime("%Y-%m-%d")
+        yday = now - timedelta(days=1)
+        yesterday = yday.strftime('%Y-%m-%d')
 
-def get_config(day):
-    backup_day = os.getenv('BACKUP_DAY').split(",")
-    backup_type = os.getenv('BACKUP_TYPE').split(",")
-    backup_date = f'{full_date},{today_date}'.split(",")
-    backup_dir = os.getenv('BACKUP_DIR').split(",")
-    last_backup_date = f'{full_date},{yesterday}'.split(",")
+        return last_saturday,today_date,yesterday
 
-    data = pd.DataFrame(list(zip(backup_type,backup_date,last_backup_date,backup_dir,backup_day)),columns=['backup_type','backup_date','last_backup_date','backup_dir','backup_day'])
-    #print(f'\n{data}\n')
-    #print(data)
-    df = data.query(f'backup_day.str.contains("{today}")')
-    btype = df['backup_type'].iloc[0]
-    bdate = df['backup_date'].iloc[0]
-    bdir = df['backup_dir'].iloc[0]
-    #bday = df['backup_day'].iloc[0]
-    last_backup = df['last_backup_date'].iloc[0]
+def get_config(a):
+        load_dotenv()
+        last_saturday,today_date,yesterday = get_date()
+        host = list(os.environ['HOST'].split(","))
+        backup_type = list(os.environ['BACKUP_TYPE'].split(","))
+        backup_dir = list(os.environ['BACKUP_DIR'].split(","))
+        user = list(os.environ['USER'].split(","))
+        password = list(os.environ['PASSWORD'].split(","))
+        last_backup = [last_saturday,yesterday]
+        saturday = last_saturday
+        today = today_date
+        yday = yesterday
+        df = pd.DataFrame(list(zip(host,backup_type,backup_dir,user,password,last_backup)),columns=['host','backup_type','backup_dir','user','password','last_backup'])
+        data = df.query("backup_type == @a")
+        btype = data['backup_type'].iloc[0]
+        bdir = data['backup_dir'].iloc[0]
+        username = data['user'].iloc[0]
+        lbackup = data['last_backup'].iloc[0]
+        passwd = data['password'].iloc[0]
+        return btype,bdir,username,today,lbackup,yesterday,passwd
 
-    return btype,bdate,bdir,last_backup
+def check_backup_type():
+        parser = argparse.ArgumentParser(prog='database backup',description='python script for database backup using percona xtrabackup. this script can do full and incremental backup with specify the backup type option')
+        parser.add_argument('-t','--backup-type',required=True, help="backup type accepted value only incremental or full")
+        args = vars(parser.parse_args())
 
-def check_backup_type(a):
-    btype,bdate,bdir,last_backup = get_config(a)
-    if btype == 'full':
-        full_backup(btype,bdate,bdir,last_backup)
-    elif btype == 'incremental':
-        incremental_backup(btype,bdate,bdir,last_backup)
-    else:
-        print('backup type not found')
-    
+        if args['backup_type'] == 'full':
+             full_backup()
+        elif args['backup_type'] == 'incremental':
+             incremental_backup()
+        else:
+             print("backup type not found")
 
-def full_backup(type,date,dir):
-    subprocess.run()
-    
-def incremental_backup(type,date,dir,last_backup):
-    btype,bdate,bdir,lstbackup = type,date,dir,last_backup
-    yday = 'Saturday'
-    if yday == 'Saturday':
-        print(f'xtrabackup --backup --target-dir={bdir}/inc_{bdate} --incremental-basedir=/backup/full/full_{lstbackup}')
-    else:
-        print(f'xtrabackup --backup --target-dir={bdir}/inc_{bdate} --incremental-basedir={bdir}/inc_{lstbackup}')
-    #subprocess.run()
-     
-     
+def check_backup_directory(dirpath,date):
+        backup_dir = Path(f'{dirpath}{date}')
+        try:
+           os.makedirs(backup_dir)
+           print("backup directory created: ",backup_dir)
+        except Exception as error:
+           print("backup failed:",error)
+           sys.exit(1)
 
 
-check_backup_type(today)
+def full_backup():
+        btype,bdir,username,today,lbackup,yesterday,passwd = get_config('full')
+        check_backup_directory(bdir,today)
+        try:
+          subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
+        except Exception as error:
+            print(error)
 
-#get_config(today)
+def incremental_backup():
+        btype,bdir,username,today,lbackup,yesterday = get_config('incremental')
+        check_backup_directory(bdir,today)
+        if today == 'Sunday':
+             backuptype,backupdir,user,now,lastbackup,yday = get_config('full')
+             try:
+                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--backup","--target-dir={bdir}{now}","--incremental-basedir={backupdir}{lastbackup}","-u","root","-pQwerty#123"])
+             except Exception as error:
+                 print(error)
+        else:
+            try:
+                subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--backup","--target-dir={bdir}{now}","--incremental-basedir={bdir}{yesterday}","-u","root","-pQwerty#123"])
+            except Exception as error:
+                print(error)
+
+
+
+
+if __name__ == "__main__":
+      check_backup_type()
+
