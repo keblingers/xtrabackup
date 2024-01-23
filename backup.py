@@ -66,7 +66,7 @@ def full_backup():
         btype,bdir,username,today,lbackup,yesterday,passwd = get_config('full')
         check_backup_directory(bdir,today)
         try:
-          subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
+          subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
         except Exception as error:
             print(error)
 
@@ -76,12 +76,12 @@ def incremental_backup():
         if today == 'Sunday':
              backuptype,backupdir,user,now,lastbackup,yday,passwd = get_config('full')
              try:
-                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{lastbackup}","-u",f"{user}",f"-p{passwd}"])
+                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{lastbackup}","-u",f"{user}",f"-p{passwd}"])
              except Exception as error:
                  print(error)
         else:
             try:
-                subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
+                subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
             except Exception as error:
                 print(error)
 
