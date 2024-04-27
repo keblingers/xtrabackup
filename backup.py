@@ -44,6 +44,7 @@ def get_config(a,b):
 def check_backup_type():
         parser = argparse.ArgumentParser(prog='database backup',description='python script for database backup using percona xtrabackup. this script can do full and incremental backup with specify the backup type option')
         parser.add_argument('-t','--backup-type',required=True, help="backup type accepted value only incremental or full")
+        parser.add_argument('-e','--env-file',required=True, help="env file for running backup")
         args = vars(parser.parse_args())
 
         if args['backup_type'] == 'full':
