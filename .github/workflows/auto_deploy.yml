@@ -1,4 +1,4 @@
-name : deploy to kebsas airflow
+name : deploy to kebsas01
 on :
   push:
     branches: 
