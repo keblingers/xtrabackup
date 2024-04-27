@@ -19,8 +19,9 @@ def get_date():
 
         return last_saturday,today_date,yesterday
 
-def get_config(a):
-        load_dotenv()
+def get_config(a,b):
+        env_path = Path(b)
+        load_dotenv(env_path)
         last_saturday,today_date,yesterday = get_date()
         host = list(os.environ['HOST'].split(","))
         backup_type = list(os.environ['BACKUP_TYPE'].split(","))
@@ -46,9 +47,9 @@ def check_backup_type():
         args = vars(parser.parse_args())
 
         if args['backup_type'] == 'full':
-             full_backup()
+             full_backup(args['backup_type'],args['env_file'])
         elif args['backup_type'] == 'incremental':
-             incremental_backup()
+             incremental_backup(args['backup_type'],args['env_file'])
         else:
              print("backup type not found")
 
@@ -62,8 +63,8 @@ def check_backup_directory(dirpath,date):
            sys.exit(1)
 
 
-def full_backup():
-        btype,bdir,username,today,lbackup,yesterday,passwd = get_config('full')
+def full_backup(type,envpath):
+        btype,bdir,username,today,lbackup,yesterday,passwd = get_config(type,envpath)
         check_backup_directory(bdir,today)
         try:
           subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
