@@ -87,8 +87,6 @@ def incremental_backup():
                 print(error)
 
 
-
-
 if __name__ == "__main__":
       check_backup_type()
 
