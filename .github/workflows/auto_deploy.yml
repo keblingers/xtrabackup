@@ -2,7 +2,7 @@ name : deploy to kebsas01
 on :
   push:
     branches: 
-      - kebsas01
+      - master
 jobs:
   build:
     name: deploy
