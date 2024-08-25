@@ -14,4 +14,4 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           user: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          command: cd /root/repo/xtrabackup/ && git pull origin kebsas01
+          command: cd /root/repo/xtrabackup/ && git pull origin master
