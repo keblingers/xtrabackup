@@ -41,38 +41,46 @@ def get_config(a,b):
         passwd = data['password'].iloc[0]
         return btype,bdir,username,today,lbackup,yesterday,passwd
 
+def get_last_backup():
+    history_file = Path('./backup_history.csv')
+    if os.path.exists(history_file):
+        data = pd.read_csv(history_file)
+        last_backup = data['Backup_Type'].iloc[-1]
+        last_day = data['Backup_Date'].iloc[-1]
+        return last_backup,last_day
+    else:
+        print("backup file history not found")
+
+def update_history_file(btype):
+    history_file = Path('./backup_history.csv')
+    now = datetime.today().strftime('%Y-%m-%d')
+    day_today = datetime.today().strftime('%A')
+
+    backup_data = {'Backup_Date': [now],
+                    'Backup_Type': [btype]}
+    df = pd.DataFrame(backup_data)
+        
+    if os.path.exists(history_file):
+        insert_history = df.to_csv(history_file,header=False,index=False,mode='a')
+    else:
+        print("backup file history not found, creating backup file history now")
+        create_file = df.to_csv(history_file,index=False,mode='a')
+        
+
 def check_backup_type():
         parser = argparse.ArgumentParser(prog='database backup',description='python script for database backup using percona xtrabackup. this script can do full and incremental backup with specify the backup type option')
         parser.add_argument('-t','--backup-type',required=True, help="backup type accepted value only incremental or full")
         parser.add_argument('-e','--env-file',required=True, help="env file for running backup")
         args = vars(parser.parse_args())
-
-        history_file = Path('./backup_history.csv')
-        now = datetime.today().strftime('%Y-%m-%d')
         btype = args['backup_type']
-        day_today = datetime.today().strftime('%A')
 
-        backup_data = {'Backup_Date': [now],
-                    'Backup_Type': [btype]}
-        df = pd.DataFrame(backup_data)
-        
-        if os.path.exists(history_file):
-            data = pd.read_csv(history_file)
-            last_backup = data['Backup_Type'].iloc[-1]
-            last_day = data['Backup_Date'].iloc[-1]
-            if btype == 'full':
-                insert_history = df.to_csv(history_file,header=False,index=False,mode='a')
-                full_backup(args['backup_type'],args['env_file'])
-            else:
-                print('please specify the right backup type')
-                insert_history = df.to_csv(history_file,header=False,index=False,mode='a')
-                incremental_backup(last_backup)
-
-        else:
-            print("backup file history not found, creating backup file history now")
-            
-            create_file = df.to_csv(history_file,index=False,mode='a')
+        if btype == 'full':
             full_backup(args['backup_type'],args['env_file'])
+        elif btype == 'incremental':
+            print('please specify the right backup type')
+            last_backup,last_day = get_last_backup()
+            incremental_backup(last_backup,last_day,args['env_file'])
+
 
 def check_backup_directory(dirpath,date):
         backup_dir = Path(f'{dirpath}{date}')
@@ -89,21 +97,24 @@ def full_backup(type,envpath):
         check_backup_directory(bdir,today)
         try:
           subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
+          update_history_file(type)
         except Exception as error:
             print(error)
 
-def incremental_backup(btype,lbackup):
-        btype,bdir,username,today,lbackup,yesterday,passwd = get_config(btype)
+def incremental_backup(type,lbackup,envfile):
+        btype,bdir,username,today,lbackup,yesterday,passwd = get_config(type,envfile)
         check_backup_directory(bdir,today)
         if lbackup == 'full':
              backuptype,backupdir,user,now,lastbackup,yday,passwd = get_config(lbackup)
              try:
                  subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{lastbackup}","-u",f"{user}",f"-p{passwd}"])
+                 update_history_file(type)
              except Exception as error:
                  print(error)
         else:
             try:
                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
+                update_history_file(type)
             except Exception as error:
                 print(error)
 
