@@ -118,7 +118,6 @@ def incremental_backup(type,lbackup,envfile):
             except Exception as error:
                 print(error)
 
-
 if __name__ == "__main__":
       check_backup_type()
 
