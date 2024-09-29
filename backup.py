@@ -112,13 +112,13 @@ def incremental_backup(type,last,backup,envfile):
              backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
              try:
                  subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{last}","-u",f"{user}",f"-p{passwd}"])
-                 update_history_file(type)
+                 update_history_file(backup)
              except Exception as error:
                  print(error)
         else:
             try:
                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
-                update_history_file(type)
+                update_history_file(backup)
             except Exception as error:
                 print(error)
 
