@@ -26,20 +26,19 @@ def get_config(a,b):
         host = list(os.environ['HOST'].split(","))
         backup_type = list(os.environ['BACKUP_TYPE'].split(","))
         backup_dir = list(os.environ['BACKUP_DIR'].split(","))
-        user = list(os.environ['USER'].split(","))
+        user = list(os.environ['UNAME'].split(","))
         password = list(os.environ['PASSWORD'].split(","))
         last_backup = [last_saturday,yesterday]
         saturday = last_saturday
         today = today_date
         yday = yesterday
-        df = pd.DataFrame(list(zip(host,backup_type,backup_dir,user,password,last_backup)),columns=['host','backup_type','backup_dir','user','password','last_backup'])
+        df = pd.DataFrame(list(zip(host,backup_type,backup_dir,user,password)),columns=['host','backup_type','backup_dir','user','password'])
         data = df.query("backup_type == @a")
         btype = data['backup_type'].iloc[0]
         bdir = data['backup_dir'].iloc[0]
         username = data['user'].iloc[0]
-        lbackup = data['last_backup'].iloc[0]
         passwd = data['password'].iloc[0]
-        return btype,bdir,username,today,lbackup,yesterday,passwd
+        return btype,bdir,username,today,yesterday,passwd
 
 def get_last_backup():
     history_file = Path('./backup_history.csv')
@@ -75,25 +74,29 @@ def check_backup_type():
         btype = args['backup_type']
 
         if btype == 'full':
+            print('===== processing full backup =====')
             full_backup(args['backup_type'],args['env_file'])
         elif btype == 'incremental':
-            print('please specify the right backup type')
+            print('===== processing incremental backup =====')
             last_backup,last_day = get_last_backup()
-            incremental_backup(last_backup,last_day,args['env_file'])
+            print(last_backup,last_day)
+            incremental_backup(last_backup,last_day,args['backup_type'],args['env_file'])
+        else:
+             print("backup tyupe not found")
 
 
 def check_backup_directory(dirpath,date):
         backup_dir = Path(f'{dirpath}{date}')
         try:
            os.makedirs(backup_dir)
-           print("backup directory created: ",backup_dir)
+           print(f"===== backup directory created: {backup_dir} =====")
         except Exception as error:
            print("backup failed:",error)
            sys.exit(1)
 
 
 def full_backup(type,envpath):
-        btype,bdir,username,today,lbackup,yesterday,passwd = get_config(type,envpath)
+        btype,bdir,username,today,yesterday,passwd = get_config(type,envpath)
         check_backup_directory(bdir,today)
         try:
           subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
@@ -101,13 +104,14 @@ def full_backup(type,envpath):
         except Exception as error:
             print(error)
 
-def incremental_backup(type,lbackup,envfile):
-        btype,bdir,username,today,lbackup,yesterday,passwd = get_config(type,envfile)
+def incremental_backup(type,last,backup,envfile):
+        btype,bdir,username,today,yesterday,passwd = get_config(backup,envfile)
+        print(btype,bdir,username,today,yesterday,passwd)
         check_backup_directory(bdir,today)
-        if lbackup == 'full':
-             backuptype,backupdir,user,now,lastbackup,yday,passwd = get_config(lbackup)
+        if type == 'full':
+             backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
              try:
-                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{lastbackup}","-u",f"{user}",f"-p{passwd}"])
+                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{last}","-u",f"{user}",f"-p{passwd}"])
                  update_history_file(type)
              except Exception as error:
                  print(error)
