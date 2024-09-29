@@ -9,9 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: fifsky/ssh-action@master
+        uses: tiyee/action-ssh@release
         with:
-          host: ${{ secrets.SSH_HOST }}
-          user: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          command: cd /root/repo/xtrabackup/ && git pull origin master
+          host: ${{ secrets.HOST }} 
+          port: ${{ secrets.PORT }}
+          username: ${{ secrets.USERNAME }}
+          privateKey: ${{ secrets.PRIVATE_KEY }}
+          command: cd /root/repo/xtrabackup/ && git pull origin kebsas01
