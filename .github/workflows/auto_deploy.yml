@@ -15,4 +15,4 @@ jobs:
           port: ${{ secrets.PORT }}
           username: ${{ secrets.USERNAME }}
           privateKey: ${{ secrets.PRIVATE_KEY }}
-          command: cd /root/repo/xtrabackup/ && git pull origin kebsas01
+          command: cd /root/repo/xtrabackup/ && git pull origin master
