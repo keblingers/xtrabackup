@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: tiyee/action-ssh@release
+        uses: tiyee/action-ssh@v1
         with:
           host: ${{ secrets.HOST }} 
           port: ${{ secrets.PORT }}
