@@ -50,13 +50,14 @@ def get_last_backup():
     else:
         print("backup file history not found")
 
-def update_history_file(btype):
+def update_history_file(btype,dirpath):
     history_file = Path('./backup_history.csv')
     now = datetime.today().strftime('%Y-%m-%d')
     day_today = datetime.today().strftime('%A')
 
     backup_data = {'Backup_Date': [now],
-                    'Backup_Type': [btype]}
+                    'Backup_Type': [btype],
+                    'Backup_Directory': [dirpath]}
     df = pd.DataFrame(backup_data)
         
     if os.path.exists(history_file):
@@ -98,9 +99,10 @@ def check_backup_directory(dirpath,date):
 def full_backup(type,envpath):
         btype,bdir,username,today,yesterday,passwd = get_config(type,envpath)
         check_backup_directory(bdir,today)
+        backup_dir = f'{bdir}{today}'
         try:
           subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
-          update_history_file(type)
+          update_history_file(type,backup_dir)
         except Exception as error:
             print(error)
 
@@ -108,18 +110,19 @@ def incremental_backup(type,last,backup,envfile):
         btype,bdir,username,today,yesterday,passwd = get_config(backup,envfile)
         print(btype,bdir,username,today,yesterday,passwd)
         check_backup_directory(bdir,today)
+        backup_dir = f'{bdir}{today}'
         if type == 'full':
              backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
              try:
                  subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{last}","-u",f"{user}",f"-p{passwd}"])
-                 update_history_file(backup)
+                 update_history_file(backup,backup_dir)
              except Exception as error:
                  print(error)
         else:
             backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
             try:
                 subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
-                update_history_file(backup)
+                update_history_file(backup,backup_dir)
             except Exception as error:
                 print(error)
 
