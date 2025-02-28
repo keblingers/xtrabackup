@@ -101,7 +101,7 @@ def full_backup(type,envpath):
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         try:
-          subprocess.run(["/root/tmp/percona-xtrabackup-8.0/bin/xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
+          subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
           update_history_file(type,backup_dir)
         except Exception as error:
             print(error)
