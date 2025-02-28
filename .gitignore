@@ -1,1 +1,6 @@
 backup_history.csv
+.env
+.venv
+env/
+venv/
+ENV/
