@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: appleboy/ssh-action@v1.2.1
+        uses: fifsky/ssh-action@master
         with:
           host: ${{ secrets.HOST }} 
           port: ${{ secrets.PORT }}
-          username: ${{ secrets.USERNAME }}
+          user: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
-          script: cd /root/repo/xtrabackup/ && git pull origin master
+          command: cd /root/repo/xtrabackup/ && git pull origin master
