@@ -63,7 +63,7 @@ def update_history_file(btype,dirpath):
     if os.path.exists(history_file):
         insert_history = df.to_csv(history_file,header=False,index=False,mode='a')
     else:
-        print(f"===== backup file history not found, creating backup file history now {history_file}=====")
+        print(f"\n===== backup file history not found, creating backup file history now ({history_file}) =====")
         create_file = df.to_csv(history_file,index=False,mode='a')
         
 
