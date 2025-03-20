@@ -63,7 +63,7 @@ def update_history_file(btype,dirpath):
     if os.path.exists(history_file):
         insert_history = df.to_csv(history_file,header=False,index=False,mode='a')
     else:
-        print("backup file history not found, creating backup file history now")
+        print(f"===== backup file history not found, creating backup file history now {history_file}=====")
         create_file = df.to_csv(history_file,index=False,mode='a')
         
 
@@ -75,10 +75,10 @@ def check_backup_type():
         btype = args['backup_type']
 
         if btype == 'full':
-            print('===== processing full backup =====')
+            print('===== processing full backup =====\n')
             full_backup(args['backup_type'],args['env_file'])
         elif btype == 'incremental':
-            print('===== processing incremental backup =====')
+            print('===== processing incremental backup =====\n')
             last_backup,last_day = get_last_backup()
             print(last_backup,last_day)
             incremental_backup(last_backup,last_day,args['backup_type'],args['env_file'])
@@ -90,7 +90,7 @@ def check_backup_directory(dirpath,date):
         backup_dir = Path(f'{dirpath}{date}')
         try:
            os.makedirs(backup_dir)
-           print(f"===== backup directory created: {backup_dir} =====")
+           print(f"===== backup directory created: {backup_dir} =====\n")
         except Exception as error:
            print("backup failed:",error)
            sys.exit(1)
@@ -100,6 +100,7 @@ def full_backup(type,envpath):
         btype,bdir,username,today,yesterday,passwd = get_config(type,envpath)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
+        print('===== starting full backup =====\n')
         try:
           subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
           update_history_file(type,backup_dir)
@@ -111,6 +112,7 @@ def incremental_backup(type,last,backup,envfile):
         print(btype,bdir,username,today,yesterday,passwd)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
+        print('===== starting incremental backup =====\n')
         if type == 'full':
              backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
              try:
