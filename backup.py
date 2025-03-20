@@ -109,7 +109,6 @@ def full_backup(type,envpath):
 
 def incremental_backup(type,last,backup,envfile):
         btype,bdir,username,today,yesterday,passwd = get_config(backup,envfile)
-        print(btype,bdir,username,today,yesterday,passwd)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         print('===== starting incremental backup =====\n')
