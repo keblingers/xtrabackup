@@ -80,7 +80,6 @@ def check_backup_type():
         elif btype == 'incremental':
             print('===== processing incremental backup =====\n')
             last_backup,last_day = get_last_backup()
-            print(last_backup,last_day)
             incremental_backup(last_backup,last_day,args['backup_type'],args['env_file'])
         else:
              print("backup tyupe not found")
@@ -103,6 +102,7 @@ def full_backup(type,envpath):
         print('===== starting full backup =====\n')
         try:
           subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
+          print("\n===== Backup Completed ===== \n")
           update_history_file(type,backup_dir)
         except Exception as error:
             print(error)
@@ -116,6 +116,7 @@ def incremental_backup(type,last,backup,envfile):
              backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
              try:
                  subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{last}","-u",f"{user}",f"-p{passwd}"])
+                 print("\n===== Backup Completed ===== \n")
                  update_history_file(backup,backup_dir)
              except Exception as error:
                  print(error)
@@ -123,6 +124,7 @@ def incremental_backup(type,last,backup,envfile):
             backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
             try:
                 subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
+                print("\n===== Backup Completed ===== \n")
                 update_history_file(backup,backup_dir)
             except Exception as error:
                 print(error)
