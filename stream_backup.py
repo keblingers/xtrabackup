@@ -102,7 +102,8 @@ def full_backup(type,envpath,bhistory):
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         try:
-          subprocess.run(["ssh",f"{host}","xtrabackup","--defaults-file=/etc/my.cnf","--login-path=local","--backup","--stream=xbstream",f"--target-dir={bdir}{today}","|","xbstream","-x","-C","/var/lib/data"])
+          #subprocess.run(["ssh",f"{host}","xtrabackup","--defaults-file=/etc/my.cnf","--login-path=local","--backup","--stream=xbstream",f"--target-dir={bdir}{today}","|","xbstream","-x","-C","/var/lib/data"])
+          subprocess.run(["ssh",f"'{host}","xtrabackup","--compress","--backup","--stream=xbstream",f"--target-dir=/root/tmp/backup/{today}'","|","xbstream","-x","-C",f"/root/backup/{today}"])
           update_history_file(type,backup_dir,bhistory)
         except Exception as error:
             print(error)
