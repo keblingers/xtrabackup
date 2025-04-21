@@ -38,20 +38,19 @@ def get_config(a,b):
         bdir = data['backup_dir'].iloc[0]
         username = data['user'].iloc[0]
         passwd = data['password'].iloc[0]
-        return btype,bdir,username,today,yesterday,passwd
+        return bdir,username,today,passwd
 
 def get_last_backup(bhistory):
-    #history_file = Path('./backup_history.csv')
     if os.path.exists(bhistory):
         data = pd.read_csv(bhistory)
         last_backup = data['Backup_Type'].iloc[-1]
         last_day = data['Backup_Date'].iloc[-1]
-        return last_backup,last_day
+        last_backup_dir = data['Backup_Directory'].iloc[-1]
+        return last_backup_dir
     else:
         print("backup file history not found")
 
 def update_history_file(btype,dirpath,bhistory):
-    #history_file = Path('./backup_history.csv')
     now = datetime.today().strftime('%Y-%m-%d')
     day_today = datetime.today().strftime('%A')
 
@@ -81,8 +80,8 @@ def check_backup_type():
             full_backup(args['backup_type'],args['env_file'],args['backup_history'])
         elif btype == 'incremental':
             print('===== processing incremental backup =====\n')
-            last_backup,last_day = get_last_backup(args['backup_history'])
-            incremental_backup(last_backup,last_day,args['backup_type'],args['env_file'],args['backup_history'])
+            last_backup_dir = get_last_backup(args['backup_history'])
+            incremental_backup(last_backup_dir,args['backup_type'],args['env_file'],args['backup_history'])
         else:
              print("backup tyupe not found")
 
@@ -98,38 +97,29 @@ def check_backup_directory(dirpath,date):
 
 
 def full_backup(type,envpath,bhistory):
-        btype,bdir,username,today,yesterday,passwd = get_config(type,envpath)
+        bdir,username,today,passwd = get_config(type,envpath)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         print('===== starting full backup =====\n')
         try:
-          subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u","root",f"-p{passwd}"])
+          subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{today}","-u",f"{username}",f"-p{passwd}"])
           print("\n===== Backup Completed ===== \n")
           update_history_file(type,backup_dir,bhistory)
         except Exception as error:
             print(error)
 
-def incremental_backup(type,last,backup,envfile,bhistory):
-        btype,bdir,username,today,yesterday,passwd = get_config(backup,envfile)
+def incremental_backup(lbackup_dir,type,last,backup_type,envfile,bhistory):
+        bdir,username,today,passwd = get_config(backup_type,envfile)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         print('===== starting incremental backup =====\n')
-        if type == 'full':
-             backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
-             try:
-                 subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{last}","-u",f"{user}",f"-p{passwd}"])
-                 print("\n===== Backup Completed ===== \n")
-                 update_history_file(backup,backup_dir,bhistory)
-             except Exception as error:
-                 print(error)
-        else:
-            backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
-            try:
-                subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
-                print("\n===== Backup Completed ===== \n")
-                update_history_file(backup,backup_dir,bhistory)
-            except Exception as error:
-                print(error)
+       
+        try:
+            subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={backup_dir}",f"--incremental-basedir={lbackup_dir}","-u",f"{username}",f"-p{passwd}"])
+            print("\n===== Backup Completed ===== \n")
+            update_history_file(backup_type,backup_dir,bhistory)
+        except Exception as error:
+            print(error)
 
 if __name__ == "__main__":
       check_backup_type()

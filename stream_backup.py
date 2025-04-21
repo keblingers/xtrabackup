@@ -19,7 +19,7 @@ def get_date():
 
         return last_saturday,today_date,yesterday
 
-def get_config(a,b):
+def get_config(host,b):
         env_path = Path(b)
         load_dotenv(env_path)
         last_saturday,today_date,yesterday = get_date()
@@ -33,26 +33,25 @@ def get_config(a,b):
         today = today_date
         yday = yesterday
         df = pd.DataFrame(list(zip(host,backup_type,backup_dir,user,password)),columns=['host','backup_type','backup_dir','user','password'])
-        data = df.query("backup_type == @a")
-        iphost = df.query['host'].iloc[0]
+        data = df.query("host == @host")
+        iphost = data['host'].iloc[0]
         btype = data['backup_type'].iloc[0]
         bdir = data['backup_dir'].iloc[0]
         username = data['user'].iloc[0]
         passwd = data['password'].iloc[0]
-        return iphost,btype,bdir,username,today,yesterday,passwd
+        return iphost,bdir,username,today,passwd
 
 def get_last_backup(bhistory):
-    #history_file = Path('./backup_history.csv')
     if os.path.exists(bhistory):
         data = pd.read_csv(bhistory)
         last_backup = data['Backup_Type'].iloc[-1]
         last_day = data['Backup_Date'].iloc[-1]
-        return last_backup,last_day
+        last_backup_dir = data['Backup_Directory'].iloc[-1]
+        return last_backup_dir
     else:
         print("backup file history not found")
 
 def update_history_file(btype,dirpath,bhistory):
-    #history_file = Path('./backup_history.csv')
     now = datetime.today().strftime('%Y-%m-%d')
     day_today = datetime.today().strftime('%A')
 
@@ -73,16 +72,19 @@ def check_backup_type():
         parser.add_argument('-t','--backup-type',required=True, help="backup type accepted value only incremental or full")
         parser.add_argument('-e','--env-file',required=True, help="env file for running backup")
         parser.add_argument('-f','--backup-history',required=True, help="backup history catalog file")
+        parser.add_argument('-h','--host',required=True,help="source backup host")
         args = vars(parser.parse_args())
         btype = args['backup_type']
 
         if btype == 'full':
             print('===== processing full backup =====')
-            full_backup(args['backup_type'],args['env_file'],args['backup_history'])
+            full_backup(args['host'],args['env_file'],args['backup_history'],btype)
+        
         elif btype == 'incremental':
             print('===== processing incremental backup =====')
-            last_backup,last_day = get_last_backup(args['backup_history'])
-            incremental_backup(last_backup,last_day,args['backup_type'],args['env_file'],args['backup_history'])
+            last_backup_dir = get_last_backup(args['backup_history'])
+            incremental_backup(last_backup_dir,args['host'],btype,args['env_file'],args['backup_history'])
+
         else:
              print("backup tyupe not found")
 
@@ -96,37 +98,45 @@ def check_backup_directory(dirpath,date):
            print("backup failed:",error)
            sys.exit(1)
 
+def get_last_lsn(basedir):
+     checkpoint_file = Path(f"{basedir}/xtrabackup_checkpoints")
+     with open(checkpoint_file,"r") as file:
+          content = file.readlines()
+          last_lsn = None
+          for line in content:
+               if line.startswith("last_lsn"):
+                    last_lsn = line.split("=")[-1].strip()
+                    break
+          return last_lsn
 
-def full_backup(type,envpath,bhistory):
-        host,btype,bdir,username,today,yesterday,passwd = get_config(type,envpath)
+
+def full_backup(sourcehost,envpath,bhistory,btype):
+        host,bdir,username,today,passwd = get_config(sourcehost,envpath)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         try:
-          #subprocess.run(["ssh",f"{host}","xtrabackup","--defaults-file=/etc/my.cnf","--login-path=local","--backup","--stream=xbstream",f"--target-dir={bdir}{today}","|","xbstream","-x","-C","/var/lib/data"])
-          subprocess.run(["ssh",f"'{host}","xtrabackup","--compress","--backup","--stream=xbstream",f"--target-dir=/root/tmp/backup/{today}'","|","xbstream","-x","-C",f"/root/backup/{today}"])
-          update_history_file(type,backup_dir,bhistory)
+          backup1 = subprocess.Popen(["ssh",f"{host}","xtrabackup","--compress","--backup","-u",f"{username}",f"-p{passwd}",f"--host={host}","--stream=xbstream",f"--target-dir={backup_dir}"],stdout=subprocess.PIPE)
+          backup2 = subprocess.Popen(["xbstream","-x","-C",f"{backup_dir}"],stdin=backup1.stdout, stdout=subprocess.PIPE)
+          backup = backup2.communicate()[0]
+          update_history_file(btype,backup_dir,bhistory)
+
         except Exception as error:
             print(error)
 
-def incremental_backup(type,last,backup,envfile,bhistory):
-        btype,bdir,username,today,yesterday,passwd = get_config(backup,envfile)
-        print(btype,bdir,username,today,yesterday,passwd)
+def incremental_backup(lbackup_dir,shost,btype,envfile,bhistory):
+        host,bdir,username,today,passwd = get_config(shost,envfile)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
-        if type == 'full':
-             backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
-             try:
-                 subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={backupdir}{last}","-u",f"{user}",f"-p{passwd}"])
-                 update_history_file(backup,backup_dir,bhistory)
-             except Exception as error:
-                 print(error)
-        else:
-            backuptype,backupdir,user,now,yday,passwd = get_config(type,envfile)
-            try:
-                subprocess.run(["xtrabackup","--compress","--backup",f"--target-dir={bdir}{now}",f"--incremental-basedir={bdir}{yesterday}","-u",f"{username}",f"-p{passwd}"])
-                update_history_file(backup,backup_dir,bhistory)
-            except Exception as error:
-                print(error)
+        last_lsn = get_last_lsn(lbackup_dir)
+        try:
+            command1 = subprocess.Popen(["ssh",f"{host}","xtrabackup","--compress","--backup","-u",f"{username}",f"-p{passwd}",f"--host={host}","--stream=xbstream",f"--incremental-lsn={last_lsn}",f"target-dir={backup_dir}"],stdout=subprocess.PIPE)
+            command2 = subprocess.Popen(["xbstream","-x","-C",f"{backup_dir}"])
+            command1.stdout.close()
+            command2.stdout.close()
+            exct = command2.communicate()[0]
+            update_history_file(btype,backup_dir,bhistory)
+        except Exception as error:
+            print(error)
 
 if __name__ == "__main__":
       check_backup_type()
