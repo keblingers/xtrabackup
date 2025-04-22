@@ -108,7 +108,7 @@ def full_backup(type,envpath,bhistory):
         except Exception as error:
             print(error)
 
-def incremental_backup(lbackup_dir,type,last,backup_type,envfile,bhistory):
+def incremental_backup(lbackup_dir,backup_type,envfile,bhistory):
         bdir,username,today,passwd = get_config(backup_type,envfile)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
