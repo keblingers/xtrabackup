@@ -92,7 +92,7 @@ def backup_retention(bhistory,inshost,envfile,retention=7):
 
 
 def full_backup(host,type,envpath,bhistory):
-        bdir,username,today,passwd = get_config(host,type,envpath)
+        iphost,bdir,username,today,passwd = get_config(host,type,envpath)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         print('===== starting full backup =====\n')
@@ -104,7 +104,7 @@ def full_backup(host,type,envpath,bhistory):
             print(error)
 
 def incremental_backup(host,lbackup_dir,backup_type,envfile,bhistory):
-        bdir,username,today,passwd = get_config(host,backup_type,envfile)
+        iphost,bdir,username,today,passwd = get_config(host,backup_type,envfile)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         print('===== starting incremental backup =====\n')
