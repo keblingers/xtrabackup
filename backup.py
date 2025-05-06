@@ -34,6 +34,7 @@ def check_backup_type():
         if btype == 'full':
             print('===== processing full backup =====\n')
             full_backup(host,args['backup_type'],args['env_file'],args['backup_history'])
+            print(f'\n===== Delete Expired Backup Using Retention config =====\n')
             backup_retention(args['backup_history'],host,args['env_file'],retention=8)
         elif btype == 'incremental':
             print('===== processing incremental backup =====\n')
