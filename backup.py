@@ -33,12 +33,12 @@ def check_backup_type():
 
         if btype == 'full':
             print('===== processing full backup =====\n')
-            full_backup(args['backup_type'],args['env_file'],args['backup_history'])
+            full_backup(host,args['backup_type'],args['env_file'],args['backup_history'])
             backup_retention(args['backup_history'],host,args['env_file'],retention=8)
         elif btype == 'incremental':
             print('===== processing incremental backup =====\n')
             last_backup_dir = get_last_backup(args['backup_history'])
-            incremental_backup(last_backup_dir,args['backup_type'],args['env_file'],args['backup_history'])
+            incremental_backup(host,last_backup_dir,args['backup_type'],args['env_file'],args['backup_history'])
         else:
              print("backup tyupe not found")
 
@@ -84,8 +84,8 @@ def backup_retention(bhistory,inshost,envfile,retention=7):
          print(error)
 
 
-def full_backup(type,envpath,bhistory):
-        bdir,username,today,passwd = get_config(type,envpath)
+def full_backup(host,type,envpath,bhistory):
+        bdir,username,today,passwd = get_config(host,type,envpath)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         print('===== starting full backup =====\n')
@@ -96,8 +96,8 @@ def full_backup(type,envpath,bhistory):
         except Exception as error:
             print(error)
 
-def incremental_backup(lbackup_dir,backup_type,envfile,bhistory):
-        bdir,username,today,passwd = get_config(backup_type,envfile)
+def incremental_backup(host,lbackup_dir,backup_type,envfile,bhistory):
+        bdir,username,today,passwd = get_config(host,backup_type,envfile)
         check_backup_directory(bdir,today)
         backup_dir = f'{bdir}{today}'
         print('===== starting incremental backup =====\n')
