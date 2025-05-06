@@ -74,7 +74,7 @@ def backup_retention(bhistory,inshost,envfile,retention=7):
                     os.remove(full_path)
                     print(f"Deleted : {full_path} (age : {age.days} days)")
                 else:
-                    print('not recognise')
+                    print(full_path,f'Backup Files still valid (Age : {age.days} days)')
                      
                 
     except Exception as error:
