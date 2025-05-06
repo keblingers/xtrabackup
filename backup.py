@@ -1,4 +1,4 @@
-import sys,argparse,os,subprocess
+import sys,argparse,os,subprocess,shutil
 from pathlib import Path
 from datetime import datetime, date, timedelta
 from dotenv import load_dotenv
@@ -64,12 +64,19 @@ def backup_retention(bhistory,inshost,envfile,retention=7):
         for x in bdir:
              entries = os.listdir(x)
              for entry in entries:
-                  full_path = os.path.join(x,entry)
-                  dir_creation_time = datetime.fromtimestamp(os.path.getctime(full_path))
-                  age = datetime.now() - dir_creation_time
-                  if age.days > retention:
-                       #shutil.rmtree(full_path)
-                       print(f"Deleted : {full_path} (age : {age.days} days)")
+                full_path = os.path.join(x,entry)
+                dir_creation_time = datetime.fromtimestamp(os.path.getctime(full_path))
+                age = datetime.now() - dir_creation_time
+                if age.days > retention and os.path.isdir(full_path):
+                    shutil.rmtree(full_path)
+                    print(f"Deleted : {full_path} (age : {age.days} days)")
+                elif age.days > retention and os.path.isfile(full_path):
+                    os.remove(full_path)
+                    print(f"Deleted : {full_path} (age : {age.days} days)")
+                else:
+                    print('not recognise')
+                     
+                
     except Exception as error:
         print(error)
     
