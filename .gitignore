@@ -4,3 +4,4 @@ backup_history.csv
 env/
 venv/
 ENV/
+__pycache__/
