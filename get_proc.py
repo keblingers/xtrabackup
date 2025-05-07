@@ -58,3 +58,26 @@ def get_last_lsn(basedir):
                     last_lsn = line.split("=")[-1].strip()
                     break
           return last_lsn
+     
+def get_datadir(configfile):
+     confile = Path(configfile)
+     with open(confile,"r") as file:
+        content = file.readlines()
+        datadir = None
+        for line in content:
+             if line.startswith("datadir"):
+                  datadir = line.split("=")[-1].strip()
+                  break
+        return datadir
+     
+def get_backup_history(bhistory,fbackup,lbackup=None):
+    data = pd.read_csv(Path(bhistory))
+    data['Backup_Date'] = pd.to_datetime(data['Backup_Date'])
+    data.sort_values(by='Backup_Date',ascending=True,inplace=True)
+    if lbackup == None:
+        backup_history = data.loc[(data['Backup_Date'] == fbackup) & (data['Backup_Type'] == 'full')]
+        return backup_history
+    else:
+        backup_history = data.loc[(data['Backup_Date'] >= fbackup) & (data['Backup_Date'] <= lbackup)]
+        return backup_history
+    
